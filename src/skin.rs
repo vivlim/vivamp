@@ -39,15 +39,23 @@ pub fn open_skin() -> Result <WinampSkin, SkinError>{
     let mut zip = zip::ZipArchive::new(zipfile)?;
 
     let mut slice_map: HashMap<String, Vec<SliceMapping>> = HashMap::new();
-    slice_map.insert("CBUTTONS.BMP".to_string(), 
-        map_repeated(0, 0, 22, 18, 23, 0, vec![
-            "button-prev",
-            "button-play",
-            "button-pause",
-            "button-stop",
-            "button-next",
-            "button-eject"
-            ]));
+
+    let mut button_slice_map = map_repeated(0, 0, 22, 18, 23, 0, vec![
+        "button-prev",
+        "button-play",
+        "button-pause",
+        "button-stop",
+        "button-next",
+        "button-eject" ]);
+    button_slice_map.append(&mut map_repeated(0, 18, 22, 18, 23, 0, vec![
+        "button-prev-pressed",
+        "button-play-pressed",
+        "button-pause-pressed",
+        "button-stop-pressed",
+        "button-next-pressed",
+        "button-eject-pressed" ]));
+
+    slice_map.insert("CBUTTONS.BMP".to_string(), button_slice_map);
 
     let mut map: HashMap<String, LoadedImage> = HashMap::new();
     for i in 0..zip.len() {

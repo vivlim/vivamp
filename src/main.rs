@@ -6,6 +6,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
     let app = eframe_template::TemplateApp::default();
-    let native_options = eframe::NativeOptions::default();
+    let mut native_options = eframe::NativeOptions::default();
+    native_options.decorated = false;
     eframe::run_native(Box::new(app), native_options);
 }

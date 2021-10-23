@@ -1,8 +1,10 @@
 use std::collections::{BTreeMap, HashMap};
 
+use eframe::egui::{Pos2, Rect};
 use eframe::{egui, epi};
 
-use crate::skin::{self, WinampSkin};
+use crate::skin::{self, LoadedImage, WinampSkin};
+use crate::widgets::button::MultiImageButton;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
@@ -23,9 +25,9 @@ pub struct TemplateApp {
     skin_textures: HashMap<String, LoadedTexture>,
 }
 
-struct LoadedTexture {
-    size: eframe::egui::Vec2,
-    texture: eframe::egui::TextureId,
+pub struct LoadedTexture {
+    pub size: eframe::egui::Vec2,
+    pub texture: eframe::egui::TextureId,
 }
 
 impl Default for TemplateApp {
@@ -100,6 +102,26 @@ impl epi::App for TemplateApp {
         // Tip: a good default choice is to just keep the `CentralPanel`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
+        egui::CentralPanel::default().show(ctx, |ui| {
+            if *textures_loaded {
+                let tex = skin_textures.get("MAIN.BMP").unwrap();
+                ui.put(egui::Rect::from_min_size(Pos2::new(0.0, 0.0), tex.size), create_image_widget(tex));
+
+                ui.put(get_abs_image_rect(skin_textures.get("button-prev").unwrap(), 39.0, 88.0),
+                    MultiImageButton::new(
+                    skin_textures.get("button-play").unwrap(),
+                    skin_textures.get("button-play").unwrap(),
+                    skin_textures.get("button-play-pressed").unwrap()));
+                ui.put(get_abs_image_rect(skin_textures.get("button-prev").unwrap(), 16.0, 88.0),
+                    MultiImageButton::new(
+                    skin_textures.get("button-prev").unwrap(),
+                    skin_textures.get("button-prev").unwrap(),
+                    skin_textures.get("button-prev-pressed").unwrap()));
+            }
+        });
+
+
+        /*
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
             egui::menu::bar(ui, |ui| {
@@ -122,6 +144,17 @@ impl epi::App for TemplateApp {
             ui.add(egui::Slider::new(value, 0.0..=10.0).text("value"));
             if ui.button("Increment").clicked() {
                 *value += 1.0;
+            }
+
+            if *textures_loaded {
+                ui.add(MultiImageButton::new(
+                    skin_textures.get("button-play").unwrap(),
+                    skin_textures.get("button-play").unwrap(),
+                    skin_textures.get("button-play-pressed").unwrap()));
+                ui.add(MultiImageButton::new(
+                    skin_textures.get("button-prev").unwrap(),
+                    skin_textures.get("button-prev").unwrap(),
+                    skin_textures.get("button-prev-pressed").unwrap()));
             }
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
@@ -151,6 +184,8 @@ impl epi::App for TemplateApp {
                 ui.add(egui::Image::new(texture.texture, texture.size));
             }
         });
+        */
+
 
         if false {
             egui::Window::new("Window").show(ctx, |ui| {
@@ -161,4 +196,12 @@ impl epi::App for TemplateApp {
             });
         }
     }
+}
+
+fn create_image_widget(texture: &LoadedTexture) -> egui::Image {
+    egui::Image::new(texture.texture, texture.size)
+}
+
+fn get_abs_image_rect(texture: &LoadedTexture, x: f32, y: f32) -> Rect {
+    egui::Rect::from_min_size(Pos2::new(x, y), texture.size)
 }

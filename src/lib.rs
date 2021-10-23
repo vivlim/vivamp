@@ -4,6 +4,7 @@
 
 mod app;
 mod skin;
+mod widgets;
 pub use app::TemplateApp;
 
 // ----------------------------------------------------------------------------
