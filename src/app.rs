@@ -1,4 +1,8 @@
+use std::collections::{BTreeMap, HashMap};
+
 use eframe::{egui, epi};
+
+use crate::skin::{self, WinampSkin};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
@@ -10,6 +14,18 @@ pub struct TemplateApp {
     // this how you opt-out of serialization of a member
     #[cfg_attr(feature = "persistence", serde(skip))]
     value: f32,
+
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    skin_images: Option<WinampSkin>,
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    textures_loaded: bool,
+    #[cfg_attr(feature = "persistence", serde(skip))]
+    skin_textures: HashMap<String, LoadedTexture>,
+}
+
+struct LoadedTexture {
+    size: eframe::egui::Vec2,
+    texture: eframe::egui::TextureId,
 }
 
 impl Default for TemplateApp {
@@ -18,6 +34,9 @@ impl Default for TemplateApp {
             // Example stuff:
             label: "Hello World!".to_owned(),
             value: 2.7,
+            skin_images: None,
+            textures_loaded: false,
+            skin_textures: Default::default()
         }
     }
 }
@@ -40,6 +59,8 @@ impl epi::App for TemplateApp {
         if let Some(storage) = _storage {
             *self = epi::get_value(storage, epi::APP_KEY).unwrap_or_default()
         }
+        let skin = skin::open_skin();
+        self.skin_images = skin.ok();
     }
 
     /// Called by the frame work to save state before shutdown.
@@ -52,7 +73,27 @@ impl epi::App for TemplateApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        let Self { label, value } = self;
+        let Self { label, value, skin_images, textures_loaded, skin_textures} = self;
+
+        if !*textures_loaded {
+            match skin_images {
+                Some(skin) => {
+                    for (name, image) in skin.images.iter() {
+                        println!("loading texture for {}", name);
+                        let texture = frame.tex_allocator().alloc_srgba_premultiplied(image.size, &image.pixels);
+                        let size = egui::Vec2::new(image.size.0 as f32, image.size.1 as f32);
+                        skin_textures.insert(name.clone(), LoadedTexture {
+                            size,
+                            texture,
+                        });
+
+                    }
+                   *textures_loaded = true;
+                },
+                None => ()
+            }
+        }
+
 
         // Examples of how to create different panels and windows.
         // Pick whichever suits you.
@@ -104,6 +145,11 @@ impl epi::App for TemplateApp {
                 "Source code."
             ));
             egui::warn_if_debug_build(ui);
+
+            for (name, texture) in skin_textures {
+                ui.heading(name);
+                ui.add(egui::Image::new(texture.texture, texture.size));
+            }
         });
 
         if false {
