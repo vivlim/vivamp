@@ -44,6 +44,24 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug executable 'eframe_template' - other theme",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=eframe_template",
+                    "--package=eframe_template"
+                ],
+                "filter": {
+                    "name": "eframe_template",
+                    "kind": "bin"
+                }
+            },
+            "args": ["/Users/vivlim/Downloads/Garfield Amp.wsz"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in executable 'eframe_template'",
             "cargo": {
                 "args": [

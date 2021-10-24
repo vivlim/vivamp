@@ -1,7 +1,7 @@
 
 use std::fs;
 
-use codegen::Scope;
+use codegen::{Scope, Type};
 
 struct SkinFile {
     filename: String,
@@ -21,6 +21,7 @@ const IMAGE_ENUM_NAME: &str = "SkinImage";
 
 fn regions(scope: &mut Scope) -> Vec<SkinFile>{
     let volume_slider_bar_names = numbered_enum_names("VolumeSliderBar", 28, scope);
+    let small_font_names = char_mapped_enum_names("SmallFont", "ABCDEFGHIJKLMNOPQRSTUVWXYZ\"@0123456789….:()-'!_+\\/[]^&%,=$#".to_string(), scope);
 
     vec![
     SkinFile {
@@ -57,7 +58,7 @@ fn regions(scope: &mut Scope) -> Vec<SkinFile>{
     SkinFile {
         filename: "VOLUME.BMP".to_string(),
         regions: vec![
-            map_repeated(0, 0, 68, 13, 0, 70, volume_slider_bar_names.iter().map(|s| s.as_str()).collect()),
+            map_repeated(0, 0, 68, 13, 0, 15, volume_slider_bar_names.iter().map(|s| s.as_str()).collect()),
             vec![
                 SkinFileRegion {
                     top_left_x: 0,
@@ -74,6 +75,13 @@ fn regions(scope: &mut Scope) -> Vec<SkinFile>{
                     enum_name: "VolumeSliderButtonPressed".to_string()
                 },
             ]
+        ]
+    },
+    SkinFile {
+        filename: "TEXT.BMP".to_string(),
+        regions: vec![
+            map_repeated(0, 0, 4, 6, 5, 0, small_font_names.iter().take(28).map(|s| s.as_str()).collect()),
+            map_repeated(0, 6, 4, 6, 5, 0, small_font_names.iter().skip(28).take(31).map(|s| s.as_str()).collect()),
         ]
     },
     ]
@@ -151,4 +159,62 @@ fn numbered_enum_names(prefix: &str, count: usize, scope: &mut Scope) -> Vec<Str
     iter_fn.line("].into_iter()");
 
     names
+}
+
+/// Generates a set of numbered enum names, and a function which will iterate them
+fn char_mapped_enum_names(prefix: &str, char_string: String, scope: &mut Scope) -> Vec<String> {
+    let names: Vec<String> = char_string.chars().into_iter().map(|c| format!("{}{}", prefix, map_special_chars_to_names(c))).collect();
+
+    let mut iter_fn = scope.new_fn(format!("char_{}", prefix).as_str());
+    iter_fn.arg("c", Type::new("char"));
+    iter_fn.vis("pub");
+    iter_fn.ret("Option<SkinImage>");
+    iter_fn.line("match c {");
+    let chars: Vec<char> = char_string.chars().into_iter().collect();
+    for i in 0..names.len() {
+        iter_fn.line(format!("'{}' => Some({}::{}),", escape_char_for_string(chars[i]), IMAGE_ENUM_NAME, names[i]));
+    }
+    iter_fn.line("_ => None");
+    iter_fn.line("}");
+
+    names
+}
+
+fn map_special_chars_to_names(c: char) -> String {
+    match c {
+        '"' => "DoubleQuote".to_string(),
+        '@' => "At".to_string(),
+        '.' => "PeriodMaybe".to_string(),
+        '-' => "Hyphen".to_string(),
+        ':' => "Colon".to_string(),
+        '(' => "LeftParen".to_string(),
+        ')' => "RightParen".to_string(),
+        '\'' => "SingleQuote".to_string(),
+        '!' => "Exclamation".to_string(),
+        '_' => "Underscore".to_string(),
+        '+' => "Plus".to_string(),
+        '\\' => "Backslash".to_string(),
+        '/' => "Slash".to_string(),
+        '[' => "LeftBracket".to_string(),
+        ']' => "RightBracket".to_string(),
+        '^' => "Caret".to_string(),
+        '&' => "Ampersand".to_string(),
+        '%' => "Percent".to_string(),
+        ',' => "Comma".to_string(),
+        '=' => "Equals".to_string(),
+        '$' => "Dollar".to_string(),
+        '#' => "Hash".to_string(),
+        '…' => "Ellipsis".to_string(),
+        _ => c.to_string()
+
+    }
+}
+
+fn escape_char_for_string(c: char) -> String {
+    match c {
+        '\'' => "\\'".to_string(),
+        '\\' => "\\\\".to_string(),
+        _ => c.to_string()
+    }
+
 }

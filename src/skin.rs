@@ -1,4 +1,4 @@
-use std::{collections::{BTreeMap, HashMap}, fmt::Debug, fs::{self, File}, io::{self, Read}};
+use std::{collections::{BTreeMap, HashMap}, fmt::Debug, fs::{self, File}, io::{self, Read}, path::PathBuf};
 use eframe::egui::{Color32, Rect};
 use image::{DynamicImage, GenericImageView};
 use thiserror::Error;
@@ -15,7 +15,9 @@ pub enum SkinError {
     #[error("Zip")]
     Zip(#[from] zip::result::ZipError),
     #[error("Image")]
-    Image(#[from] image::ImageError)
+    Image(#[from] image::ImageError),
+    #[error("Expected file missing {0}")]
+    ExpectedFileMissing(String)
 
 }
 
@@ -50,15 +52,21 @@ pub struct RectLoadSpec {
 
     //Texture((eframe::egui::Vec2, eframe::egui::TextureId))
 
-pub fn open_skin() -> Result <WinampSkin, SkinError>{
-    let zipfile = fs::File::open("/Users/vivlim/winamp/base-2.91.wsz.zip")?;
+pub fn open_skin(path: &PathBuf) -> Result <WinampSkin, SkinError>{
+    let zipfile = fs::File::open(path)?;
     let mut zip = zip::ZipArchive::new(zipfile)?;
+
+    let mut zip_filename_case_map = HashMap::new();
+    for filename in zip.file_names() {
+        zip_filename_case_map.insert(filename.to_ascii_lowercase(), filename.to_string());
+    }
 
     let load_specs = get_skin_load_specs();
 
     let mut map = Map::new();
     for file_spec in load_specs {
-        let mut file = zip.by_name(file_spec.filename)?;
+        let mut filename_recased = zip_filename_case_map.get(&file_spec.filename.to_lowercase()).ok_or(SkinError::ExpectedFileMissing(file_spec.filename.to_string()))?;
+        let mut file = zip.by_name(&filename_recased)?;
 
         let mut data: Vec<u8> = Default::default();
         file.read_to_end(&mut data)?;
@@ -103,6 +111,8 @@ fn load_image_slices_from_data(data: DynamicImage, rect_specs: &Vec<RectLoadSpec
 
     for rect_spec in rect_specs {
         let data_cropped = data.crop_imm(rect_spec.top_left_x, rect_spec.top_left_y, rect_spec.bottom_right_x - rect_spec.top_left_x, rect_spec.bottom_right_y - rect_spec.top_left_y);
+        // double image size
+        //let data_cropped = data_cropped.resize(data_cropped.width()*2, data_cropped.height()*2, image::imageops::FilterType::Nearest);
         let image_buffer = data_cropped.to_rgba8();
         let size = (data_cropped.width() as usize, data_cropped.height() as usize);
         let pixels = image_buffer.into_vec();

@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
+use std::path::PathBuf;
 
 use eframe::egui::{Pos2, Rect};
 use eframe::{egui, epi};
@@ -28,6 +29,7 @@ pub struct TemplateApp {
     skin_textures: Map<SkinImage, LoadedTexture>,
 
     volume: f32,
+    pub skin_path: Option<PathBuf>
 }
 
 pub struct LoadedTexture {
@@ -44,7 +46,8 @@ impl Default for TemplateApp {
             skin_images: None,
             textures_loaded: false,
             skin_textures: Default::default(),
-            volume: 0.5
+            volume: 0.5,
+            skin_path: None
         }
     }
 }
@@ -67,7 +70,7 @@ impl epi::App for TemplateApp {
         if let Some(storage) = _storage {
             *self = epi::get_value(storage, epi::APP_KEY).unwrap_or_default()
         }
-        let skin = skin::open_skin();
+        let skin = skin::open_skin(self.skin_path.as_ref().unwrap_or(&PathBuf::from(r"/Users/vivlim/winamp/base-2.91.wsz.zip")));
         self.skin_images = skin.ok();
     }
 
@@ -81,7 +84,7 @@ impl epi::App for TemplateApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        let Self { label, value, skin_images, textures_loaded, skin_textures, volume} = self;
+        let Self { label, value, skin_images, textures_loaded, skin_textures, volume, skin_path} = self;
 
         if !*textures_loaded {
             match skin_images {
@@ -213,12 +216,14 @@ impl epi::App for TemplateApp {
         */
 
 
-        if false {
-            egui::Window::new("Window").show(ctx, |ui| {
-                ui.label("Windows can be moved by dragging them.");
-                ui.label("They are automatically sized based on contents.");
-                ui.label("You can turn on resizing and scrolling if you like.");
-                ui.label("You would normally chose either panels OR windows.");
+        if true {
+            egui::Window::new("Textures").show(ctx, |ui| {
+                egui::ScrollArea::auto_sized().show(ui, |ui| {
+                    for (name, texture) in skin_textures.iter() {
+                        ui.heading(name.as_ref());
+                        ui.add(egui::Image::new(texture.texture, texture.size));
+                    }
+                });
             });
         }
     }
