@@ -4,8 +4,9 @@ use eframe::egui::{Pos2, Rect};
 use eframe::{egui, epi};
 
 use crate::skin::{self, LoadedImage, WinampSkin};
-use crate::skin_generated::SkinImage;
+use crate::skin_generated::{SkinImage, iter_VolumeSliderBar};
 use crate::widgets::button::MultiImageButton;
+use crate::widgets::slider::{SliderGraphics, WinampSlider};
 use fixed_map::{Key, Map};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -25,6 +26,8 @@ pub struct TemplateApp {
     textures_loaded: bool,
     #[cfg_attr(feature = "persistence", serde(skip))]
     skin_textures: Map<SkinImage, LoadedTexture>,
+
+    volume: f32,
 }
 
 pub struct LoadedTexture {
@@ -40,7 +43,8 @@ impl Default for TemplateApp {
             value: 2.7,
             skin_images: None,
             textures_loaded: false,
-            skin_textures: Default::default()
+            skin_textures: Default::default(),
+            volume: 0.5
         }
     }
 }
@@ -77,7 +81,7 @@ impl epi::App for TemplateApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        let Self { label, value, skin_images, textures_loaded, skin_textures} = self;
+        let Self { label, value, skin_images, textures_loaded, skin_textures, volume} = self;
 
         if !*textures_loaded {
             match skin_images {
@@ -133,6 +137,12 @@ impl epi::App for TemplateApp {
                         skin_textures.get(i.hover_texture).unwrap(),
                         skin_textures.get(i.click_texture).unwrap()));
                 }
+                let slider_textures = SliderGraphics::<&LoadedTexture> {
+                    bar: iter_VolumeSliderBar().map(|i| skin_textures.get(i).unwrap()).collect(),
+                    handle: skin_textures.get(SkinImage::VolumeSliderButton).unwrap(),
+                    handle_clicked: skin_textures.get(SkinImage::VolumeSliderButtonPressed).unwrap(),
+                }; 
+                ui.put(egui::Rect::from_min_size(Pos2::new(106.0, 0.0), tex.size), WinampSlider::new(volume, 0.0..=1.0, slider_textures));
             }
         });
 
