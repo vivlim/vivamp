@@ -1,8 +1,11 @@
-use std::{collections::HashMap, fmt::Debug, fs::{self, File}, io::{self, Read}};
+use std::{collections::{BTreeMap, HashMap}, fmt::Debug, fs::{self, File}, io::{self, Read}};
 use eframe::egui::{Color32, Rect};
 use image::{DynamicImage, GenericImageView};
 use thiserror::Error;
 use zip::ZipArchive;
+use fixed_map::{Key, Map};
+
+use crate::skin_generated::get_skin_load_specs;
 
 
 #[derive(Error, Debug)]
@@ -17,13 +20,13 @@ pub enum SkinError {
 }
 
 pub struct WinampSkin {
-    pub images: HashMap<String, LoadedImage>
+    pub images: Map<crate::skin_generated::SkinImage, LoadedImage>
 }
 
 pub struct LoadedImage {
     pub pixels: Vec<Color32>,
     pub size: (usize, usize),
-    pub name: String,
+    pub image: crate::skin_generated::SkinImage,
 }
 
 #[derive(Debug)]
@@ -32,58 +35,39 @@ struct SliceMapping {
     name: String
 }
 
+pub struct FileLoadSpec<'a> {
+    pub filename: &'a str,
+    pub regions: Vec<RectLoadSpec>
+}
+
+pub struct RectLoadSpec {
+    pub top_left_x: u32,
+    pub top_left_y: u32,
+    pub bottom_right_x: u32,
+    pub bottom_right_y: u32,
+    pub image: crate::skin_generated::SkinImage
+}
+
     //Texture((eframe::egui::Vec2, eframe::egui::TextureId))
 
 pub fn open_skin() -> Result <WinampSkin, SkinError>{
     let zipfile = fs::File::open("/Users/vivlim/winamp/base-2.91.wsz.zip")?;
     let mut zip = zip::ZipArchive::new(zipfile)?;
 
-    let mut slice_map: HashMap<String, Vec<SliceMapping>> = HashMap::new();
+    let load_specs = get_skin_load_specs();
 
-    let mut button_slice_map = map_repeated(0, 0, 22, 18, 23, 0, vec![
-        "button-prev",
-        "button-play",
-        "button-pause",
-        "button-stop",
-        "button-next",
-        "button-eject" ]);
-    button_slice_map.append(&mut map_repeated(0, 18, 22, 18, 23, 0, vec![
-        "button-prev-pressed",
-        "button-play-pressed",
-        "button-pause-pressed",
-        "button-stop-pressed",
-        "button-next-pressed",
-        "button-eject-pressed" ]));
-
-    slice_map.insert("CBUTTONS.BMP".to_string(), button_slice_map);
-
-    let mut map: HashMap<String, LoadedImage> = HashMap::new();
-    for i in 0..zip.len() {
-        let mut file = zip.by_index(i)?;
-
-        if !file.name().ends_with(".BMP") {
-            // only load bmps
-            continue;
-        }
+    let mut map = Map::new();
+    for file_spec in load_specs {
+        let mut file = zip.by_name(file_spec.filename)?;
 
         let mut data: Vec<u8> = Default::default();
         file.read_to_end(&mut data)?;
         let image_data = image::load_from_memory(&data)?;
 
-        let default_slice_map = vec![map_def(0, 0, image_data.width(), image_data.height(), file.name())];
 
-        println!("loading {}", file.name());
-        let slice_maps = match slice_map.get(file.name()) {
-            Some(map) => {
-                println!("using slice map {:?}", map);
-                map
-            },
-            None => &default_slice_map,
-        };
-
-        let loaded_images = load_image_slices_from_data(image_data, slice_maps)?;
+        let loaded_images = load_image_slices_from_data(image_data, &file_spec.regions)?;
         for image in loaded_images {
-            map.insert(image.name.clone(), image);
+            map.insert(image.image, image);
         }
     }
 
@@ -114,13 +98,11 @@ fn map_def(x0: u32, y0: u32, x1: u32, y1: u32, name: &str) -> SliceMapping {
 }
 
 
-fn load_image_slices_from_data(data: DynamicImage, slice_maps: &Vec<SliceMapping>) -> Result <Vec<LoadedImage>, SkinError>{
+fn load_image_slices_from_data(data: DynamicImage, rect_specs: &Vec<RectLoadSpec>) -> Result <Vec<LoadedImage>, SkinError>{
     let mut result: Vec<LoadedImage> = vec![];
 
-    for slice_map in slice_maps {
-        println!("doing slice map {:?}", slice_map);
-        let top_left = slice_map.region.left_top();
-        let data_cropped = data.crop_imm(top_left.x as u32, top_left.y as u32, slice_map.region.width() as u32, slice_map.region.height() as u32);
+    for rect_spec in rect_specs {
+        let data_cropped = data.crop_imm(rect_spec.top_left_x, rect_spec.top_left_y, rect_spec.bottom_right_x - rect_spec.top_left_x, rect_spec.bottom_right_y - rect_spec.top_left_y);
         let image_buffer = data_cropped.to_rgba8();
         let size = (data_cropped.width() as usize, data_cropped.height() as usize);
         let pixels = image_buffer.into_vec();
@@ -133,7 +115,7 @@ fn load_image_slices_from_data(data: DynamicImage, slice_maps: &Vec<SliceMapping
         result.push(LoadedImage {
             pixels,
             size,
-            name: slice_map.name.clone(),
+            image: rect_spec.image,
         });
     }
     Ok(result)

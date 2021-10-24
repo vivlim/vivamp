@@ -232,6 +232,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "codegen"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34c59e8a9b988977ec3bd61ab380cf1167048817ecd3d6999fac03657f85a609"
+dependencies = [
+ "indexmap",
+]
+
+[[package]]
 name = "color_quant"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -543,7 +552,9 @@ dependencies = [
 name = "eframe_template"
 version = "0.1.0"
 dependencies = [
+ "codegen",
  "eframe",
+ "fixed-map",
  "image",
  "serde",
  "strum",
@@ -628,6 +639,27 @@ dependencies = [
  "egui",
  "ron",
  "serde",
+]
+
+[[package]]
+name = "fixed-map"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2f44d950b8f284f5f5623cf28d3d88a18e7971ae6d0f5b504e31bf5aabf2bef"
+dependencies = [
+ "fixed-map-derive",
+ "hashbrown",
+]
+
+[[package]]
+name = "fixed-map-derive"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ad3b14ed65a0a9d71facfd6c846ab7da35693be84375d739e68426d270cf26a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -790,6 +822,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hashbrown"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
+dependencies = [
+ "ahash",
+]
+
+[[package]]
 name = "heck"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -827,6 +868,16 @@ dependencies = [
  "num-iter",
  "num-rational",
  "num-traits",
+]
+
+[[package]]
+name = "indexmap"
+version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc633605454125dec4b66843673f01c7df2b89479b32e0ed634e43a91cff62a5"
+dependencies = [
+ "autocfg",
+ "hashbrown",
 ]
 
 [[package]]

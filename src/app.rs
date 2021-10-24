@@ -4,7 +4,9 @@ use eframe::egui::{Pos2, Rect};
 use eframe::{egui, epi};
 
 use crate::skin::{self, LoadedImage, WinampSkin};
+use crate::skin_generated::SkinImage;
 use crate::widgets::button::MultiImageButton;
+use fixed_map::{Key, Map};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
@@ -22,7 +24,7 @@ pub struct TemplateApp {
     #[cfg_attr(feature = "persistence", serde(skip))]
     textures_loaded: bool,
     #[cfg_attr(feature = "persistence", serde(skip))]
-    skin_textures: HashMap<String, LoadedTexture>,
+    skin_textures: Map<SkinImage, LoadedTexture>,
 }
 
 pub struct LoadedTexture {
@@ -104,19 +106,33 @@ impl epi::App for TemplateApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             if *textures_loaded {
-                let tex = skin_textures.get("MAIN.BMP").unwrap();
+                let tex = skin_textures.get(SkinImage::MainWindow).unwrap();
                 ui.put(egui::Rect::from_min_size(Pos2::new(0.0, 0.0), tex.size), create_image_widget(tex));
 
-                ui.put(get_abs_image_rect(skin_textures.get("button-prev").unwrap(), 39.0, 88.0),
-                    MultiImageButton::new(
-                    skin_textures.get("button-play").unwrap(),
-                    skin_textures.get("button-play").unwrap(),
-                    skin_textures.get("button-play-pressed").unwrap()));
-                ui.put(get_abs_image_rect(skin_textures.get("button-prev").unwrap(), 16.0, 88.0),
-                    MultiImageButton::new(
-                    skin_textures.get("button-prev").unwrap(),
-                    skin_textures.get("button-prev").unwrap(),
-                    skin_textures.get("button-prev-pressed").unwrap()));
+
+                use crate::skin_generated::SkinImage::*;
+                struct ImageButtonSpec {
+                    x: u32,
+                    y: u32,
+                    texture: SkinImage,
+                    hover_texture: SkinImage,
+                    click_texture: SkinImage,
+                }
+                for i in &[
+                    ImageButtonSpec { x: 16, y: 88, texture: ButtonPrev, hover_texture: ButtonPrev, click_texture: ButtonPrevPressed },
+                    ImageButtonSpec { x: 39, y: 88, texture: ButtonPlay, hover_texture: ButtonPlay, click_texture: ButtonPlayPressed },
+                    ImageButtonSpec { x: 62, y: 88, texture: ButtonPause, hover_texture: ButtonPause, click_texture: ButtonPausePressed },
+                    ImageButtonSpec { x: 85, y: 88, texture: ButtonStop, hover_texture: ButtonStop, click_texture: ButtonStopPressed },
+                    ImageButtonSpec { x: 108, y: 88, texture: ButtonNext, hover_texture: ButtonNext, click_texture: ButtonNextPressed },
+                    ImageButtonSpec { x: 136, y: 88, texture: ButtonEject, hover_texture: ButtonEject, click_texture: ButtonEjectPressed },
+                ] {
+                    let neutral_texture = skin_textures.get(i.texture).unwrap();
+                    ui.put(get_abs_image_rect(neutral_texture, i.x as f32, i.y as f32),
+                        MultiImageButton::new(
+                        neutral_texture,
+                        skin_textures.get(i.hover_texture).unwrap(),
+                        skin_textures.get(i.click_texture).unwrap()));
+                }
             }
         });
 

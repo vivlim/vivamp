@@ -22,7 +22,7 @@ impl MultiImageButton {
             hover_image: egui::widgets::Image::new(hover_texture.texture, hover_texture.size.clone()),
             click_image: egui::widgets::Image::new(click_texture.texture, hover_texture.size.clone()),
             sense: Sense::click(),
-            frame: true,
+            frame: false,
             selected: false,
         }
     }
@@ -70,8 +70,7 @@ impl Widget for MultiImageButton {
             selected,
         } = self;
 
-        let button_padding = ui.spacing().button_padding;
-        let size = image.size() + 2.0 * button_padding;
+        let size = image.size();
         let (rect, response) = ui.allocate_exact_size(size, sense);
         response.widget_info(|| egui::WidgetInfo::new(egui::WidgetType::ImageButton));
 
@@ -91,10 +90,7 @@ impl Widget for MultiImageButton {
                 }
             };
 
-            let image_rect = ui
-                .layout()
-                .align_size_within_rect(image.size(), rect.shrink2(button_padding));
-            image_to_show.paint_at(ui, image_rect);
+            image_to_show.paint_at(ui, rect);
         }
 
         response
